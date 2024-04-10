@@ -18,31 +18,29 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class User implements Serializable {
+public class UserEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @NotBlank
+    @Column(name = "username", nullable = false, unique = true, length = 100)
     private String username;
 
-    @NotBlank
-    @Email
-    @Column(nullable = false,unique = true)
-    private String email;
-
-    @Max(8)
-    @Min(8)
-    @NotBlank
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false, length = 200)
     private String password;
 
-    private UserRole role;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 25)
+    private Role role = Role.ROLE_CLIENTE;
 
-    public User(UserDTO userDTO){
+    public UserEntity(UserDTO userDTO){
         BeanUtils.copyProperties(userDTO,this);
 
+    }
+    public enum Role {
+        ROLE_ADMIN, ROLE_CLIENTE
     }
 
 }

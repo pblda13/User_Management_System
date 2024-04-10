@@ -1,52 +1,70 @@
 package br.challege.user.management.system.service;
 
-import br.challege.user.management.system.domain.User;
+import br.challege.user.management.system.domain.UserEntity;
 import br.challege.user.management.system.domain.exception.UserNotFoundException;
-import br.challege.user.management.system.dto.UserDTO;
+import br.challege.user.management.system.domain.exception.UsernameUniqueViolationException;
 import br.challege.user.management.system.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @AllArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
 
-    public void create(UserDTO userDTO) {
-        User newUser = new User(userDTO);
-        userRepository.save(newUser);
+    @Transactional
+    public UserEntity create(UserEntity user) {
+        try {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new UsernameUniqueViolationException(String.format("Username '%s' já cadastrado", user.getUsername()));
+        }
+
     }
 
-    public List<UserDTO> listAll() {
-        List<User> list = userRepository.findAll();
-        return list.stream().map(UserDTO::new).toList();
+    public List<UserEntity> listAll() {
+        List<UserEntity> list = userRepository.findAll();
+        return list;
     }
 
-    public UserDTO update(Long id, UserDTO userDTO) {
+    public UserEntity update(Long id, UserEntity user) {
 
         if (!userRepository.existsById(id)) {
             throw new UserNotFoundException("User " + id + "not found ");
         }
-        User updateUser = new User(userDTO);
-        return new UserDTO(userRepository.save(updateUser));
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+      return userRepository.save(user);
     }
 
     public void delete(Long id) {
-        User delete = userRepository.findById(id).get();
+        UserEntity delete = userRepository.findById(id).get();
         userRepository.delete(delete);
 
     }
 
-    public UserDTO findById(Long id){
-
-        return new UserDTO(userRepository.findById(id).get());
+    public Optional<UserEntity> findById(Long id) {
+      return userRepository.findById(id);
     }
 
-    public UserDTO findByUsername(String username){
-        return new UserDTO(userRepository.findByUsername(username).get());
-}
+
+    public UserEntity findByUsername(String username) {
+        return userRepository.findByUsername(username).orElseThrow(
+                () -> new EntityNotFoundException(String.format("Usuario username %s não encontrado", username))
+        );
+    }
+
+    public UserEntity.Role FindByRolePerUsername(String username) {
+        return userRepository.FindByRolePerUsername(username);
+    }
 }
