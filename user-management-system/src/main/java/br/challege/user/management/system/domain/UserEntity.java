@@ -33,12 +33,8 @@ public class UserEntity implements Serializable {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 25)
-    private Role role = Role.ROLE_CLIENTE;
+    private Role role ;
 
-    public UserEntity(UserDTO userDTO){
-        BeanUtils.copyProperties(userDTO,this);
-
-    }
     public enum Role {
         ROLE_ADMIN, ROLE_CLIENTE
     }
