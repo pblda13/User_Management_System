@@ -3,6 +3,7 @@ package br.challege.user.management.system.service;
 import br.challege.user.management.system.domain.UserEntity;
 import br.challege.user.management.system.domain.exception.UserNotFoundException;
 import br.challege.user.management.system.domain.exception.UsernameUniqueViolationException;
+import br.challege.user.management.system.producer.KafkaProducer;
 import br.challege.user.management.system.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
@@ -20,13 +21,18 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final KafkaProducer kafkaProducer;
 
 
     @Transactional
     public UserEntity create(UserEntity user) {
         try {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
-            return userRepository.save(user);
+            userRepository.save(user);
+
+            kafkaProducer.sendMessage("Usuario cadastrado com sucesso");
+
+            return user;
         } catch (DataIntegrityViolationException ex) {
             throw new UsernameUniqueViolationException(String.format("Username '%s' já cadastrado", user.getUsername()));
         }
@@ -44,7 +50,7 @@ public class UserService {
             throw new UserNotFoundException("User " + id + "not found ");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-      return userRepository.save(user);
+        return userRepository.save(user);
     }
 
     public void delete(Long id) {
@@ -54,7 +60,7 @@ public class UserService {
     }
 
     public Optional<UserEntity> findById(Long id) {
-      return userRepository.findById(id);
+        return userRepository.findById(id);
     }
 
 
