@@ -1,6 +1,7 @@
 package br.challege.user.management.system.jwt;
 
 import br.challege.user.management.system.domain.UserEntity;
+
 import br.challege.user.management.system.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

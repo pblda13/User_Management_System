@@ -7,7 +7,6 @@ import br.challege.user.management.system.dto.mapper.UserMapper;
 import br.challege.user.management.system.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +22,7 @@ public class UserController {
     private final UserService userService;
     private final UserMapper userMapper;
 
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<UserDTO> createUser(@Valid @RequestBody UserDTO userDTO) {
         UserEntity userEntity = userMapper.convertToEntity(userDTO);
         userEntity.setPassword(userDTO.getPassword());
@@ -32,7 +31,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
-    @GetMapping("/list")
+    @GetMapping
     public ResponseEntity<List<UserDTO>> listAllUsers() {
         List<UserEntity> userList = userService.listAll();
         List<UserDTO> userDTOList = userList.stream()
@@ -41,7 +40,7 @@ public class UserController {
         return ResponseEntity.ok(userDTOList);
     }
 
-    @PutMapping("/update/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO userDTO) {
         UserEntity existingUser = userService.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User " + id + " not found"));
@@ -60,7 +59,7 @@ public class UserController {
     }
 
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();
@@ -74,7 +73,7 @@ public class UserController {
         return ResponseEntity.ok(userDTO);
     }
 
-    @GetMapping("/username/{username}")
+    @GetMapping("/{username}")
     public ResponseEntity<UserDTO> getUserByUsername(@PathVariable String username) {
         UserEntity user = userService.findByUsername(username);
         UserDTO userDTO = userMapper.convertToDTO(user);

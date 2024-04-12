@@ -12,7 +12,7 @@ import org.springframework.beans.BeanUtils;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "users")
+@Table(name = "USERS")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,6 +34,12 @@ public class UserEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 25)
     private Role role ;
+
+    public UserEntity(String username, String password, Role role) {
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
 
     public enum Role {
         ROLE_ADMIN, ROLE_CLIENTE
