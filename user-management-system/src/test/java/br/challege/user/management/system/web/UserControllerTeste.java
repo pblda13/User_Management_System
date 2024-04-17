@@ -1,8 +1,5 @@
 package br.challege.user.management.system.web;
 
-import br.challege.user.management.system.repository.UserRepository;
-import br.challege.user.management.system.service.UserService;
-import br.challege.user.management.system.web.controller.UserController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +7,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
-
-import javax.swing.plaf.PanelUI;
 
 import static br.challege.user.management.system.common.USER;
 import static org.mockito.Mockito.when;

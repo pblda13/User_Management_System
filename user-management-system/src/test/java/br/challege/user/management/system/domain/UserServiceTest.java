@@ -3,8 +3,6 @@ package br.challege.user.management.system.domain;
 import br.challege.user.management.system.domain.exception.UserNotFoundException;
 import br.challege.user.management.system.domain.exception.UsernameUniqueViolationException;
 import br.challege.user.management.system.producer.KafkaProducer;
-import br.challege.user.management.system.repository.UserRepository;
-import br.challege.user.management.system.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,21 +46,21 @@ class UserServiceTest {
     void testCreateUser_Success() {
         // Arrange
         // Cria um usuário de teste
-        UserEntity user = new UserEntity(null, "testuser", "password", UserEntity.Role.ROLE_ADMIN);
+        UserModel user = new UserModel(null, "testuser", "password", UserModel.Role.ROLE_ADMIN);
         // Configura o comportamento dos mocks
         when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
-        when(userRepository.save(any(UserEntity.class))).thenReturn(user);
+        when(userRepository.save(any(UserModel.class))).thenReturn(user);
 
         // Act
         // Chama o método a ser testado
-        UserEntity createdUser = userService.create(user);
+        UserModel createdUser = userService.create(user);
 
         // Assert
         // Verifica os resultados
         assertNotNull(createdUser); // Garante que o usuário criado não seja nulo
         assertEquals("encodedPassword", createdUser.getPassword()); // Verifica se a senha foi corretamente codificada
         assertEquals("testuser", createdUser.getUsername()); // Verifica se o nome de usuário é o esperado
-        assertEquals(UserEntity.Role.ROLE_ADMIN, createdUser.getRole()); // Verifica se a função do usuário é a esperada
+        assertEquals(UserModel.Role.ROLE_ADMIN, createdUser.getRole()); // Verifica se a função do usuário é a esperada
         verify(kafkaProducer, times(1)).sendMessage(anyString()); // Verifica se o método sendMessage do KafkaProducer foi chamado
     }
 
@@ -71,9 +69,9 @@ class UserServiceTest {
     void testCreateUser_Failure_UsernameExists() {
         // Arrange
         // Cria um usuário de teste com nome existente
-        UserEntity user = new UserEntity(null, "existingUser", "password", UserEntity.Role.ROLE_ADMIN);
+        UserModel user = new UserModel(null, "existingUser", "password", UserModel.Role.ROLE_ADMIN);
         // Simula uma exceção ao tentar salvar no repositório
-        when(userRepository.save(any(UserEntity.class))).thenThrow(DataIntegrityViolationException.class);
+        when(userRepository.save(any(UserModel.class))).thenThrow(DataIntegrityViolationException.class);
 
         // Assert
         // Verifica se uma exceção é lançada ao tentar criar o usuário
@@ -88,15 +86,15 @@ class UserServiceTest {
     void testListAllUsers() {
         // Arrange
         // Cria uma lista de usuários de teste
-        List<UserEntity> userList = new ArrayList<>();
-        userList.add(new UserEntity(1L, "user1", "password1", UserEntity.Role.ROLE_CLIENTE));
-        userList.add(new UserEntity(2L, "user2", "password2", UserEntity.Role.ROLE_ADMIN));
+        List<UserModel> userList = new ArrayList<>();
+        userList.add(new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE));
+        userList.add(new UserModel(2L, "user2", "password2", UserModel.Role.ROLE_ADMIN));
         // Configura o comportamento do mock para retornar essa lista
         when(userRepository.findAll()).thenReturn(userList);
 
         // Act
         // Chama o método a ser testado
-        List<UserEntity> result = userService.listAll();
+        List<UserModel> result = userService.listAll();
 
         // Assert
         // Verifica os resultados
@@ -114,30 +112,30 @@ class UserServiceTest {
         // Dados do usuário existente
         String existingUsername = "user1";
         String existingPassword = "password1";
-        UserEntity existingUser = new UserEntity(userId, existingUsername, existingPassword, UserEntity.Role.ROLE_CLIENTE);
+        UserModel existingUser = new UserModel(userId, existingUsername, existingPassword, UserModel.Role.ROLE_CLIENTE);
 
         // Configura o comportamento dos mocks
         when(userRepository.existsById(userId)).thenReturn(true);
         when(passwordEncoder.encode(anyString())).thenReturn("encodedNewPassword");
 
         // Simula a lógica de salvamento com codificação de senha
-        when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> {
-            UserEntity user = invocation.getArgument(0);
+        when(userRepository.save(any(UserModel.class))).thenAnswer(invocation -> {
+            UserModel user = invocation.getArgument(0);
             user.setPassword(passwordEncoder.encode(user.getPassword())); // Codifica a senha aqui
             return user;
         });
 
         // Act
         // Chama o método a ser testado
-        UserEntity updatedUser = userService.update(userId, new UserEntity(null, existingUsername, "newPassword", UserEntity.Role.ROLE_ADMIN));
+        UserModel updatedUser = userService.update(userId, new UserModel(null, existingUsername, "newPassword", UserModel.Role.ROLE_ADMIN));
 
         // Assert
         // Verifica os resultados
         assertNotNull(updatedUser); // Verifica se o usuário atualizado não é nulo
         assertEquals("encodedNewPassword", updatedUser.getPassword()); // Verifica se a senha foi corretamente atualizada
-        assertEquals(UserEntity.Role.ROLE_ADMIN, updatedUser.getRole()); // Verifica se a função do usuário foi corretamente atualizada
+        assertEquals(UserModel.Role.ROLE_ADMIN, updatedUser.getRole()); // Verifica se a função do usuário foi corretamente atualizada
         verify(userRepository, times(1)).existsById(userId); // Verifica se existsById foi chamado uma vez com o ID correto
-        verify(userRepository, times(1)).save(any(UserEntity.class)); // Verifica se save foi chamado uma vez com uma entidade de usuário
+        verify(userRepository, times(1)).save(any(UserModel.class)); // Verifica se save foi chamado uma vez com uma entidade de usuário
     }
 
     // Teste de falha na atualização de usuário (usuário não encontrado)
@@ -151,7 +149,7 @@ class UserServiceTest {
         // Verifica se uma exceção é lançada ao tentar atualizar um usuário inexistente
         assertThrows(UserNotFoundException.class, () -> {
             // Act
-            userService.update(1L, new UserEntity(null, "user1", "newPassword", UserEntity.Role.ROLE_ADMIN));
+            userService.update(1L, new UserModel(null, "user1", "newPassword", UserModel.Role.ROLE_ADMIN));
         });
     }
 
@@ -160,7 +158,7 @@ class UserServiceTest {
     void testDeleteUser_Success() {
         // Arrange
         // Usuário existente a ser excluído
-        UserEntity existingUser = new UserEntity(1L, "user1", "password1", UserEntity.Role.ROLE_CLIENTE);
+        UserModel existingUser = new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE);
         // Configura o comportamento do mock para retornar esse usuário ao buscar pelo ID
         when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
 
@@ -193,13 +191,13 @@ class UserServiceTest {
     void testFindById() {
         // Arrange
         // Usuário existente
-        UserEntity existingUser = new UserEntity(1L, "user1", "password1", UserEntity.Role.ROLE_CLIENTE);
+        UserModel existingUser = new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE);
         // Configura o comportamento do mock para retornar esse usuário ao buscar pelo ID
         when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
 
         // Act
         // Chama o método a ser testado
-        Optional<UserEntity> result = userService.findById(1L);
+        Optional<UserModel> result = userService.findById(1L);
 
         // Assert
         // Verifica se o usuário retornado é o esperado
@@ -212,13 +210,13 @@ class UserServiceTest {
     void testFindByUsername_Success() {
         // Arrange
         // Usuário existente
-        UserEntity existingUser = new UserEntity(1L, "user1", "password1", UserEntity.Role.ROLE_CLIENTE);
+        UserModel existingUser = new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE);
         // Configura o comportamento do mock para retornar esse usuário ao buscar pelo nome de usuário
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(existingUser));
 
         // Act
         // Chama o método a ser testado
-        UserEntity result = userService.findByUsername("user1");
+        UserModel result = userService.findByUsername("user1");
 
         // Assert
         // Verifica se o usuário retornado é o esperado
@@ -245,15 +243,15 @@ class UserServiceTest {
     void testFindByRolePerUsername() {
         // Arrange
         // Configura o comportamento do mock para retornar a função do usuário ao buscar pelo nome de usuário
-        when(userRepository.FindByRolePerUsername("user1")).thenReturn(UserEntity.Role.ROLE_ADMIN);
+        when(userRepository.FindByRolePerUsername("user1")).thenReturn(UserModel.Role.ROLE_ADMIN);
 
         // Act
         // Chama o método a ser testado
-        UserEntity.Role result = userService.FindByRolePerUsername("user1");
+        UserModel.Role result = userService.FindByRolePerUsername("user1");
 
         // Assert
         // Verifica se a função do usuário retornado é a esperada
-        assertEquals(UserEntity.Role.ROLE_ADMIN, result);
+        assertEquals(UserModel.Role.ROLE_ADMIN, result);
     }
 }
 

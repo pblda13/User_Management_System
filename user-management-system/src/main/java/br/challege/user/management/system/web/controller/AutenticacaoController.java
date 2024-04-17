@@ -1,48 +1,40 @@
 package br.challege.user.management.system.web.controller;
 
-import br.challege.user.management.system.domain.exception.InvalidCredencialException;
-import br.challege.user.management.system.dto.UserDTO;
-import br.challege.user.management.system.jwt.JwtToken;
-import br.challege.user.management.system.jwt.JwtUserDetailsService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
+import br.challege.user.management.system.dto.AuthDto;
+import br.challege.user.management.system.dto.RequestRefreshDto;
+import br.challege.user.management.system.dto.TokenResponseDto;
+import br.challege.user.management.system.service.AutenticacaoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-
-@Slf4j
-@RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/auth")
 public class AutenticacaoController {
 
-    private final JwtUserDetailsService detailsService;
-    private final AuthenticationManager authenticationManager;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
-    @PostMapping("/auth")
-    public ResponseEntity<?> autenticar(@RequestBody @Valid UserDTO dto, HttpServletRequest request) {
-        log.info("Processo de autenticação pelo login {}", dto.getUsername());
-        try {
-            UsernamePasswordAuthenticationToken authenticationToken =
-                    new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword());
+    @Autowired
+    private AutenticacaoService autenticacaoService;
 
-            authenticationManager.authenticate(authenticationToken);
+    @PostMapping
+    @ResponseStatus(HttpStatus.OK)
+    public TokenResponseDto auth(@RequestBody AuthDto authDto) {
 
-            JwtToken token = detailsService.getTokenAuthenticated(dto.getUsername());
+        var usuarioAutenticationToken = new UsernamePasswordAuthenticationToken(authDto.login(), authDto.senha());
 
-            return ResponseEntity.ok(token);
-        } catch (AuthenticationException ex) {
-            log.warn("Bad Credentials from username '{}'", dto.getUsername());
-            throw new InvalidCredencialException(dto.getUsername());
-        }
+        authenticationManager.authenticate(usuarioAutenticationToken);
+
+        return autenticacaoService.obterToken(authDto);
+    }
+
+    @PostMapping("/refresh-token")
+    @ResponseStatus(HttpStatus.OK)
+    public TokenResponseDto authRefreshToken(@RequestBody RequestRefreshDto requestRefreshDto) {
+        return autenticacaoService.obterRefreshToken(requestRefreshDto.refreshToken());
     }
 }

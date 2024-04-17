@@ -1,6 +1,5 @@
 package br.challege.user.management.system.domain;
 
-import br.challege.user.management.system.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +24,9 @@ public class UserRepositoryTest {
 
     @Test
     public void createdPlanet_WithValidData_ReturnsUser(){
-        UserEntity user =userRepository.save(USER);
+        UserModel user =userRepository.save(USER);
 
-        UserEntity sut = testEntityManager.find(UserEntity.class,user.getId());
+        UserModel sut = testEntityManager.find(UserModel.class,user.getId());
 
         assertThat(sut).isNotNull();
         assertThat(sut.getUsername()).isEqualTo(USER.getUsername());
