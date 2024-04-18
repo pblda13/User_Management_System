@@ -15,10 +15,10 @@ import java.util.List;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @Entity
 @Table(name = "TB_USUARIO")
 public class Usuario implements UserDetails {
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,11 +36,22 @@ public class Usuario implements UserDetails {
     @Column(nullable = false)
     private RoleEnum role;
 
+
+    public Usuario() {
+    }
+
     public Usuario(String nome, String login, String senha, RoleEnum role) {
         this.nome = nome;
         this.login = login;
         this.senha = senha;
         this.role = role;
+    }
+
+    public Usuario(long l, String existingUsername, String existingPassword, RoleEnum roleEnum) {
+        this.id = l;
+        this.login = existingUsername;
+        this.senha = existingPassword;
+        this.role = roleEnum;
     }
 
     @Override

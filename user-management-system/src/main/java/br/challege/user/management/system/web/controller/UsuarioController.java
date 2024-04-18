@@ -4,6 +4,7 @@ import br.challege.user.management.system.dto.UsuarioDto;
 import br.challege.user.management.system.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -13,17 +14,32 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     @PostMapping
-    private UsuarioDto salvar(@RequestBody UsuarioDto usuarioDto) {
-        return  usuarioService.salvar(usuarioDto) ;
+    public UsuarioDto salvar(@RequestBody UsuarioDto usuarioDto) {
+        return usuarioService.salvar(usuarioDto);
     }
 
-    @GetMapping("/admin")
-    private String getAdmin() {
-        return "permissão de administrador";
+    @PutMapping("/{id}")
+    public UsuarioDto atualizar(@PathVariable Long id, @RequestBody UsuarioDto usuarioDto) {
+        return usuarioService.atualizar(id, usuarioDto);
     }
 
-    @GetMapping("/user")
-    private String getUser() {
-        return "permissão de usuário";
+    @GetMapping("/{id}")
+    public UsuarioDto getById(@PathVariable Long id) {
+        return usuarioService.findById(id);
+    }
+
+    @GetMapping("/buscar/{username}")
+    public UsuarioDto getByLogin(@PathVariable String login) {
+        return usuarioService.findByLogin(login);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deletar(@PathVariable Long id) {
+        usuarioService.deletar(id);
+    }
+
+    @GetMapping
+    public List<UsuarioDto> getAll() {
+        return usuarioService.findAll();
     }
 }
