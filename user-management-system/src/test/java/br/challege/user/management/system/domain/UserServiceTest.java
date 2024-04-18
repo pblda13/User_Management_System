@@ -2,8 +2,11 @@ package br.challege.user.management.system.domain;
 
 import br.challege.user.management.system.domain.exception.UserNotFoundException;
 import br.challege.user.management.system.domain.exception.UsernameUniqueViolationException;
+import br.challege.user.management.system.dto.UsuarioDto;
+import br.challege.user.management.system.enums.RoleEnum;
 import br.challege.user.management.system.producer.KafkaProducer;
-import jakarta.persistence.EntityNotFoundException;
+import br.challege.user.management.system.repository.UsuarioRepository;
+import br.challege.user.management.system.service.impl.UsuarioServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,236 +28,147 @@ import java.util.ArrayList;
 // Classe de teste para o UserService
 class UserServiceTest {
 
-    // Mock do UserRepository
     @Mock
-    private UserRepository userRepository;
+    private UsuarioRepository usuarioRepository;
 
-    // Mock do PasswordEncoder
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    // Mock do KafkaProducer
     @Mock
     private KafkaProducer kafkaProducer;
 
-    // Instância do UserService a ser testado, com mocks injetados
     @InjectMocks
-    private UserService userService;
+    private UsuarioServiceImpl usuarioService;
 
-    // Teste de criação de usuário bem-sucedido
     @Test
-    void testCreateUser_Success() {
-        // Arrange
-        // Cria um usuário de teste
-        UserModel user = new UserModel(null, "testuser", "password", UserModel.Role.ROLE_ADMIN);
-        // Configura o comportamento dos mocks
-        when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
-        when(userRepository.save(any(UserModel.class))).thenReturn(user);
+    public void testSalvar() {
+        // Criando um usuário DTO para teste
+        UsuarioDto usuarioDto = new UsuarioDto("Nome", "login", "senha", RoleEnum.USER);
 
-        // Act
-        // Chama o método a ser testado
-        UserModel createdUser = userService.create(user);
-
-        // Assert
-        // Verifica os resultados
-        assertNotNull(createdUser); // Garante que o usuário criado não seja nulo
-        assertEquals("encodedPassword", createdUser.getPassword()); // Verifica se a senha foi corretamente codificada
-        assertEquals("testuser", createdUser.getUsername()); // Verifica se o nome de usuário é o esperado
-        assertEquals(UserModel.Role.ROLE_ADMIN, createdUser.getRole()); // Verifica se a função do usuário é a esperada
-        verify(kafkaProducer, times(1)).sendMessage(anyString()); // Verifica se o método sendMessage do KafkaProducer foi chamado
-    }
-
-    // Teste de falha na criação de usuário (quando o nome de usuário já existe)
-    @Test
-    void testCreateUser_Failure_UsernameExists() {
-        // Arrange
-        // Cria um usuário de teste com nome existente
-        UserModel user = new UserModel(null, "existingUser", "password", UserModel.Role.ROLE_ADMIN);
-        // Simula uma exceção ao tentar salvar no repositório
-        when(userRepository.save(any(UserModel.class))).thenThrow(DataIntegrityViolationException.class);
-
-        // Assert
-        // Verifica se uma exceção é lançada ao tentar criar o usuário
-        assertThrows(UsernameUniqueViolationException.class, () -> {
-            // Act
-            userService.create(user);
+        // Configurando o comportamento do repository mock
+        when(usuarioRepository.findByLogin("login")).thenReturn(null); // O usuário não existe ainda
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> {
+            // Simulando o salvamento do usuário e retornando um usuário válido
+            Usuario usuarioSalvo = invocation.getArgument(0);
+            usuarioSalvo.setId(1L); // Suponha que o ID seja atribuído ao salvar no banco de dados
+            return usuarioSalvo;
         });
+        when(passwordEncoder.encode("senha")).thenReturn("senhaCriptografada");
+
+        // Chamando o método salvar
+        UsuarioDto result = usuarioService.salvar(usuarioDto);
+
+        // Verificando se o usuário foi salvo corretamente
+        assertEquals("Nome", result.nome());
+        assertEquals("login", result.login());
+        assertEquals("senhaCriptografada", result.senha());
+        assertEquals(RoleEnum.USER, result.role());
+
+        // Verificando se o método sendMessage foi chamado no kafkaProducer mock
+        verify(kafkaProducer).sendMessage("Usuario cadastrado com sucesso");
     }
 
-    // Teste de listagem de todos os usuários
     @Test
-    void testListAllUsers() {
-        // Arrange
-        // Cria uma lista de usuários de teste
-        List<UserModel> userList = new ArrayList<>();
-        userList.add(new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE));
-        userList.add(new UserModel(2L, "user2", "password2", UserModel.Role.ROLE_ADMIN));
-        // Configura o comportamento do mock para retornar essa lista
-        when(userRepository.findAll()).thenReturn(userList);
+    public void testAtualizar() {
+        // Criando um usuário DTO para teste
+        UsuarioDto usuarioDto = new UsuarioDto("Novo Nome", "novoLogin", "novaSenha", RoleEnum.ADMIN);
 
-        // Act
-        // Chama o método a ser testado
-        List<UserModel> result = userService.listAll();
+        // Configurando o comportamento do repository mock
+        Usuario usuarioExistente = new Usuario("Nome Antigo", "loginAntigo", "senhaAntiga", RoleEnum.USER);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioExistente));
+        when(passwordEncoder.encode("novaSenha")).thenReturn("novaSenhaCriptografada");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> {
 
-        // Assert
-        // Verifica os resultados
-        assertEquals(2, result.size()); // Verifica se o número de usuários retornados é o esperado
-        assertEquals(userList.get(0), result.get(0)); // Verifica se o primeiro usuário é o esperado
-        assertEquals(userList.get(1), result.get(1)); // Verifica se o segundo usuário é o esperado
-    }
-
-    // Teste de atualização de usuário bem-sucedida
-    @Test
-    public void testUpdateUser_Success() {
-        // Arrange
-        // Identificador do usuário a ser atualizado
-        Long userId = 1L;
-        // Dados do usuário existente
-        String existingUsername = "user1";
-        String existingPassword = "password1";
-        UserModel existingUser = new UserModel(userId, existingUsername, existingPassword, UserModel.Role.ROLE_CLIENTE);
-
-        // Configura o comportamento dos mocks
-        when(userRepository.existsById(userId)).thenReturn(true);
-        when(passwordEncoder.encode(anyString())).thenReturn("encodedNewPassword");
-
-        // Simula a lógica de salvamento com codificação de senha
-        when(userRepository.save(any(UserModel.class))).thenAnswer(invocation -> {
-            UserModel user = invocation.getArgument(0);
-            user.setPassword(passwordEncoder.encode(user.getPassword())); // Codifica a senha aqui
-            return user;
+            // Simulando a atualização do usuário e retornando o usuário atualizado
+            Usuario usuarioAtualizado = invocation.getArgument(0);
+            usuarioAtualizado.setNome(usuarioDto.nome());
+            usuarioAtualizado.setLogin(usuarioDto.login()); // Atualizando o login
+            usuarioAtualizado.setSenha(usuarioDto.senha());
+            usuarioAtualizado.setRole(usuarioDto.role());
+            return usuarioAtualizado;
         });
 
-        // Act
-        // Chama o método a ser testado
-        UserModel updatedUser = userService.update(userId, new UserModel(null, existingUsername, "newPassword", UserModel.Role.ROLE_ADMIN));
+        // Chamando o método atualizar
+        UsuarioDto result = usuarioService.atualizar(1L, usuarioDto);
 
-        // Assert
-        // Verifica os resultados
-        assertNotNull(updatedUser); // Verifica se o usuário atualizado não é nulo
-        assertEquals("encodedNewPassword", updatedUser.getPassword()); // Verifica se a senha foi corretamente atualizada
-        assertEquals(UserModel.Role.ROLE_ADMIN, updatedUser.getRole()); // Verifica se a função do usuário foi corretamente atualizada
-        verify(userRepository, times(1)).existsById(userId); // Verifica se existsById foi chamado uma vez com o ID correto
-        verify(userRepository, times(1)).save(any(UserModel.class)); // Verifica se save foi chamado uma vez com uma entidade de usuário
+        // Verificando se o usuário foi atualizado corretamente
+        assertEquals("Novo Nome", result.nome());
+        assertEquals("novoLogin", result.login()); // Agora esperamos o novo login
+        assertEquals("novaSenha", result.senha());
+        assertEquals(RoleEnum.ADMIN, result.role());
+
+        // Verificando se o método sendMessage foi chamado no kafkaProducer mock
+        verify(kafkaProducer).sendMessage("Usuário atualizado com sucesso");
     }
 
-    // Teste de falha na atualização de usuário (usuário não encontrado)
-    @Test
-    void testUpdateUser_Failure_UserNotFound() {
-        // Arrange
-        // Simula a inexistência do usuário com o ID especificado
-        when(userRepository.existsById(1L)).thenReturn(false);
 
-        // Assert
-        // Verifica se uma exceção é lançada ao tentar atualizar um usuário inexistente
-        assertThrows(UserNotFoundException.class, () -> {
-            // Act
-            userService.update(1L, new UserModel(null, "user1", "newPassword", UserModel.Role.ROLE_ADMIN));
-        });
+    @Test
+    public void testFindById() {
+        // Configurando o comportamento do repository mock
+        Usuario usuario = new Usuario("Nome", "login", "senha", RoleEnum.USER);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+        // Chamando o método findById
+        UsuarioDto result = usuarioService.findById(1L);
+
+        // Verificando se o usuário retornado é o esperado
+        assertEquals("Nome", result.nome());
+        assertEquals("login", result.login());
+        assertEquals("senha", result.senha());
+        assertEquals(RoleEnum.USER, result.role());
     }
 
-    // Teste de exclusão de usuário bem-sucedida
     @Test
-    void testDeleteUser_Success() {
-        // Arrange
-        // Usuário existente a ser excluído
-        UserModel existingUser = new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE);
-        // Configura o comportamento do mock para retornar esse usuário ao buscar pelo ID
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+    public void testFindByLogin() {
+        // Configurando o comportamento do repository mock
+        Usuario usuario = new Usuario("Nome", "login", "senha",  RoleEnum.USER);
+        when(usuarioRepository.findByLogin("login")).thenReturn(usuario);
 
-        // Act
-        // Chama o método a ser testado
-        userService.delete(1L);
+        // Chamando o método findByLogin
+        UsuarioDto result = usuarioService.findByLogin("login");
 
-        // Assert
-        // Verifica se o método delete do repositório foi chamado com o usuário correto
-        verify(userRepository, times(1)).delete(existingUser);
+        // Verificando se o usuário retornado é o esperado
+        assertEquals("Nome", result.nome());
+        assertEquals("login", result.login());
+        assertEquals("senha", result.senha());
+        assertEquals(RoleEnum.USER, result.role());
     }
 
-    // Teste de falha na exclusão de usuário (usuário não encontrado)
     @Test
-    void testDeleteUser_Failure_UserNotFound() {
-        // Arrange
-        // Simula a inexistência do usuário com o ID especificado
-        when(userRepository.findById(1L)).thenThrow(UserNotFoundException.class);
+    public void testDeletar() {
+        // Configurando o comportamento do repository mock
+        Usuario usuario = new Usuario("Nome", "login", "senha",  RoleEnum.USER);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
 
-        // Assert
-        // Verifica se uma exceção é lançada ao tentar excluir um usuário inexistente
-        assertThrows(UserNotFoundException.class, () -> {
-            // Act
-            userService.delete(1L);
-        });
+        // Chamando o método deletar
+        usuarioService.deletar(1L);
+
+        // Verificando se o método deleteById foi chamado no repository mock
+        verify(usuarioRepository).deleteById(1L);
     }
 
-    // Teste para encontrar usuário por ID
     @Test
-    void testFindById() {
-        // Arrange
-        // Usuário existente
-        UserModel existingUser = new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE);
-        // Configura o comportamento do mock para retornar esse usuário ao buscar pelo ID
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+    public void testFindAll() {
+        // Configurando o comportamento do repository mock
+        List<Usuario> usuarios = new ArrayList<>();
+        usuarios.add(new Usuario("Nome1", "login1", "senha1", RoleEnum.USER));
+        usuarios.add(new Usuario("Nome2", "login2", "senha2", RoleEnum.ADMIN));
+        when(usuarioRepository.findAll()).thenReturn(usuarios);
 
-        // Act
-        // Chama o método a ser testado
-        Optional<UserModel> result = userService.findById(1L);
+        // Chamando o método findAll
+        List<UsuarioDto> result = usuarioService.findAll();
 
-        // Assert
-        // Verifica se o usuário retornado é o esperado
-        assertTrue(result.isPresent());
-        assertEquals(existingUser, result.get());
-    }
-
-    // Teste para encontrar usuário por nome de usuário (sucesso)
-    @Test
-    void testFindByUsername_Success() {
-        // Arrange
-        // Usuário existente
-        UserModel existingUser = new UserModel(1L, "user1", "password1", UserModel.Role.ROLE_CLIENTE);
-        // Configura o comportamento do mock para retornar esse usuário ao buscar pelo nome de usuário
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(existingUser));
-
-        // Act
-        // Chama o método a ser testado
-        UserModel result = userService.findByUsername("user1");
-
-        // Assert
-        // Verifica se o usuário retornado é o esperado
-        assertEquals(existingUser, result);
-    }
-
-    // Teste para encontrar usuário por nome de usuário (falha - usuário não encontrado)
-    @Test
-    void testFindByUsername_Failure_UserNotFound() {
-        // Arrange
-        // Simula a inexistência do usuário com o nome especificado
-        when(userRepository.findByUsername("unknownUser")).thenReturn(Optional.empty());
-
-        // Assert
-        // Verifica se uma exceção é lançada ao tentar encontrar um usuário inexistente
-        assertThrows(EntityNotFoundException.class, () -> {
-            // Act
-            userService.findByUsername("unknownUser");
-        });
-    }
-
-    // Teste para encontrar função do usuário por nome de usuário
-    @Test
-    void testFindByRolePerUsername() {
-        // Arrange
-        // Configura o comportamento do mock para retornar a função do usuário ao buscar pelo nome de usuário
-        when(userRepository.FindByRolePerUsername("user1")).thenReturn(UserModel.Role.ROLE_ADMIN);
-
-        // Act
-        // Chama o método a ser testado
-        UserModel.Role result = userService.FindByRolePerUsername("user1");
-
-        // Assert
-        // Verifica se a função do usuário retornado é a esperada
-        assertEquals(UserModel.Role.ROLE_ADMIN, result);
+        // Verificando se a lista de usuários retornada contém os usuários esperados
+        assertEquals(2, result.size());
+        assertEquals("Nome1", result.get(0).nome());
+        assertEquals("login1", result.get(0).login());
+        assertEquals("senha1", result.get(0).senha());
+        assertEquals( RoleEnum.USER, result.get(0).role());
+        assertEquals("Nome2", result.get(1).nome());
+        assertEquals("login2", result.get(1).login());
+        assertEquals("senha2", result.get(1).senha());
+        assertEquals(RoleEnum.ADMIN, result.get(1).role());
     }
 }
-
-
 
 
