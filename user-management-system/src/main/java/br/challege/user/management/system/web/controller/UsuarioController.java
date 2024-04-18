@@ -2,6 +2,7 @@ package br.challege.user.management.system.web.controller;
 
 import br.challege.user.management.system.dto.UsuarioDto;
 import br.challege.user.management.system.service.UsuarioService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -14,7 +15,7 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     @PostMapping
-    public UsuarioDto salvar(@RequestBody UsuarioDto usuarioDto) {
+    public UsuarioDto salvar(@RequestBody @Valid UsuarioDto usuarioDto) {
         return usuarioService.salvar(usuarioDto);
     }
 

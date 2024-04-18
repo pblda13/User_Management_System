@@ -61,7 +61,6 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuario);
 
-        kafkaProducer.sendMessage("Usuário atualizado com sucesso");
 
         return new UsuarioDto(usuarioAtualizado.getNome(), usuarioAtualizado.getLogin(), usuarioAtualizado.getSenha(), usuarioAtualizado.getRole());
     }

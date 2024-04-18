@@ -30,8 +30,6 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authoriza -> authoriza
                         .requestMatchers(HttpMethod.GET, "/usuarios/admin").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/usuarios/user").hasRole("USER")
-                        .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/refresh-token").permitAll()
                         .anyRequest().authenticated()
                 )
